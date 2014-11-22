@@ -32,7 +32,7 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
                '&Month=' + str(month_num) + 
                '&Day=' + str(day_num_start) + 
                '&timeframe=' + str(timeframe))
-    print(data_url)
+    print('URL' + data_url)
     url_response = request.urlopen(data_url)
     return url_response
 
@@ -126,9 +126,6 @@ def import_xml(station_id, year_num, month_num, day_num_start,
         
         
 if __name__ == "__main__":
-    # station_data = StationData()
-    # station_data.station_id = 32008
-    # execute only if run as a script
     station_datas = import_xml(station_id=32008, year_num=2010, month_num=1,
                                day_num_start=1, local_standard_tz='EST')
     
