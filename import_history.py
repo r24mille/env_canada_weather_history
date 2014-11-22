@@ -4,9 +4,26 @@ from models import StationData
 
 def fetch_content(station_id, year_num, month_num, day_num_start,
                   timeframe=1, frmt='xml'):
-    """ Fetch a single CSV document from Environment Canada.
+    """
+    Fetch weather history data from Environment Canada.
     
-    TODO: Document function parameters.
+    TODO(r24mille): Allow user to adjust timeframe parameter.
+    TODO(r24mille): Allow a user to switch between XML/CSV data for parsing.
+    
+    Keyword arguments:
+    station_id -- Integer corresponding to an Environment Canada station ID 
+                  (ie. location of weather reading).
+    year_num -- Integer indicating the year of the requested data.
+    month_num -- Integer indicating the month of the requested data.
+    day_num_start -- Integer indicating the starting day of the forecast, 
+                     though multiple days of forecasted data may be returned.
+    timeframe -- Controls the time span of data that is returned 
+                 (default 1=month of hourly observations).
+    frmt -- Controls the format that Environment Canada data should be 
+            returned in (default 'xml').
+                     
+    Return:
+    The request.urlopen response.
     """
     data_url = ('http://climate.weather.gc.ca/climateData/bulkdata_e.html' + 
                '?format=' + frmt + 
