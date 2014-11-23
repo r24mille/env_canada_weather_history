@@ -1,6 +1,9 @@
 from urllib import request
 from xml.etree import ElementTree
 from models import StationData
+from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 
 def fetch_content(station_id, year_num, month_num, day_num_start,
                   timeframe=1, frmt='xml'):
@@ -32,12 +35,12 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
                '&Month=' + str(month_num) + 
                '&Day=' + str(day_num_start) + 
                '&timeframe=' + str(timeframe))
-    print('URL' + data_url)
+    print('URL: ' + data_url)
     url_response = request.urlopen(data_url)
     return url_response
 
 def import_xml(station_id, year_num, month_num, day_num_start,
-               local_standard_tz):
+               local_tz_offset):
     """
     Calls Environment Canada endpoint and parses the returned XML into 
     StationData objects.
@@ -49,9 +52,8 @@ def import_xml(station_id, year_num, month_num, day_num_start,
     month_num -- Integer indicating the month of the requested data.
     day_num_start -- Integer indicating the starting day of the forecast, 
                      though multiple days of forecasted data may be returned.
-    local_standard_tz -- A three character string representing the 
-                         timezone (in standard time) local to the station_id
-                         being requested.
+    local_tz_offset -- An integer representing the UTC offset (in standard 
+                         time) local to the station_id being requested.
                          
     Return:
     A list of StationData objects.
@@ -67,14 +69,52 @@ def import_xml(station_id, year_num, month_num, day_num_start,
     # Instantiate list to store StationData objects
     station_datas = list()
     
+    # A few values that apply to all observations
+    station_tz = timezone(timedelta(hours=local_tz_offset))
+    for si_elmnt in weather_root.iter('stationinformation'):
+        latitude_txt = si_elmnt.find('latitude').text
+        station_latitude = None
+        if latitude_txt and latitude_txt != ' ':
+            station_latitude = float(latitude_txt)
+        
+        longitude_txt = si_elmnt.find('longitude').text
+        station_longitude = None
+        if longitude_txt and longitude_txt != ' ':
+            station_longitude = float(longitude_txt)
+            
+        elevation_txt = si_elmnt.find('elevation').text
+        station_elevation = None
+        if elevation_txt and elevation_txt != ' ':
+            station_elevation = float(elevation_txt)
+    
     # Iterate stationdata XML elements and append StationData objects to list
     for sd_elmnt in weather_root.iter('stationdata'):
         station_data = StationData()
         
-        # TODO get datetime data from attributes
-        # print(sd_elmnt.attrib)
+        station_data.latitude = station_latitude
+        station_data.longitude = station_longitude
+        station_data.elevation = station_elevation
+        
+        # Get portions of date_time for observation
+        year_txt = sd_elmnt.attrib['year']
+        month_txt = sd_elmnt.attrib['month']
+        day_txt = sd_elmnt.attrib['day']
+        hour_txt = sd_elmnt.attrib['hour']
+        minute_txt = sd_elmnt.attrib['minute']
+        if year_txt and month_txt and day_txt and hour_txt and minute_txt:
+            station_data.obs_datetime_std = datetime(year=int(year_txt),
+                                                     month=int(month_txt),
+                                                     day=int(day_txt),
+                                                     hour=int(hour_txt),
+                                                     minute=int(minute_txt),
+                                                     second=0,
+                                                     microsecond=0,
+                                                     tzinfo=station_tz)
+
         # station_data.obs_datetime_std = 
-        # station_data.obs_quality = 
+        quality_txt = sd_elmnt.attrib['quality']
+        if quality_txt and quality_txt != ' ':
+            station_data.obs_quality = quality_txt
         
         # Set StationData fields based on child elements' values
         station_data.station_id = station_id
@@ -116,7 +156,7 @@ def import_xml(station_id, year_num, month_num, day_num_start,
             station_data.wind_chill = int(windchill_txt)
             
         station_data.weather_desc = sd_elmnt.find('weather').text
-        station_data.time_zone = local_standard_tz
+        station_data.local_tz_offset = local_tz_offset
         
         # Add StationData element to list
         station_datas.append(station_data)
@@ -127,7 +167,6 @@ def import_xml(station_id, year_num, month_num, day_num_start,
         
 if __name__ == "__main__":
     station_datas = import_xml(station_id=32008, year_num=2010, month_num=1,
-                               day_num_start=1, local_standard_tz='EST')
+                               day_num_start=1, local_tz_offset=-5)
     
-    for station_data in station_datas:
-        print(station_data)
+    print(station_datas[0])

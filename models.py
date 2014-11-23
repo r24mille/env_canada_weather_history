@@ -20,7 +20,7 @@ class StationData():
         self.humidex = None
         self.wind_chill = None
         self.weather_desc = None
-        self.time_zone = None
+        self.local_tz_offset = None
         self.obs_datetime_std = None
         self.obs_quality = None
         
@@ -41,6 +41,6 @@ class StationData():
                 ', humidex=' + str(self.humidex or 'None') + 
                 ', wind_chill=' + str(self.wind_chill or 'None') + 
                 ', weather_desc=' + str(self.weather_desc or 'None') + 
-                ', time_zone=' + str(self.time_zone or 'None') + 
+                ', local_tz_offset=' + str(self.local_tz_offset or 'None') + 
                 ', obs_datetime_std=' + str(self.obs_datetime_std or 'None') + 
                 ', obs_quality=' + str(self.obs_quality or 'None') + ']')
