@@ -7,8 +7,7 @@ CREATE TABLE `envcan_station` (
   `longitude` FLOAT NULL, 
   `elevation` FLOAT NULL, 
   `climate_identifier` MEDIUMINT UNSIGNED NULL, 
-  `local_tz_std` CHAR(3) NULL, 
-  `local_tz_std_offset` TINYINT NULL, 
+  `local_timezone` VARCHAR(45) NULL, 
   PRIMARY KEY (`stationID`)) 
 ENGINE = InnoDB 
 CHARACTER SET utf8;
@@ -21,8 +20,8 @@ CREATE TABLE `envcan_legend` (
 Engine=InnoDB 
 CHARACTER SET utf8;
 
-insert into envcan_legend(envcan_quality, description) 
-values ('M', 'Missing'), ('E', 'Estimated'), ('NA', 'Not Available'), 
+INSERT INTO envcan_legend(envcan_quality, description) 
+VALUES ('M', 'Missing'), ('E', 'Estimated'), ('NA', 'Not Available'), 
 ('**', 'Partner data that is not subject to review by the National Climate Archives');
 
 -- Create the table which holds stationdata content (ie. historical weather 
