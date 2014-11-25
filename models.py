@@ -45,16 +45,22 @@ class Station():
     """
     def __init__(self):
         self.station_id = None
+        self.name = None
+        self.province = None
         self.longitude = None
         self.latitude = None
         self.elevation = None
+        self.climate_identifier = None
         self.local_tz_str = None
         
     def __str__(self):
         return ('Observation values [' + 
                 'station_id=' + str(self.station_id or 'None') + 
+                ', name=' + str(self.name or 'None') + 
+                ', province=' + str(self.province or 'None') + 
                 ', longitude=' + str(self.longitude or 'None') + 
                 ', latitude=' + str(self.latitude or 'None') + 
                 ', elevation=' + str(self.elevation or 'None') + 
+                ', local_tz_str=' + str(self.local_tz_str or 'None') + 
                 ', local_tz_str=' + str(self.local_tz_str or 'None') + 
                 ']')

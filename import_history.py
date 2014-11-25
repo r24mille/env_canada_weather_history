@@ -1,9 +1,11 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from urllib import request
 from xml.etree import ElementTree
 
+import mysql.connector 
 import pytz
 
+from config import mysql_config
 from models import Observation, Station
 
 
@@ -12,7 +14,6 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
     """
     Fetch weather history data from Environment Canada.
     
-    TODO(r24mille): Allow user to adjust timeframe parameter.
     TODO(r24mille): Allow a user to switch between XML/CSV data for parsing.
     
     Keyword arguments:
@@ -41,11 +42,98 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
     url_response = request.urlopen(data_url)
     return url_response
 
-def import_xml(station_id, year_num, month_num, day_num_start,
+def mysql_insert_observations(observations, config, batch_size=100):
+    """
+    Inserts Observations (ie. stationdata) into a database. 
+    
+    Keyword arguments:
+    observation -- A list of models.Observation objects to be inserted into a 
+                   MySQL database
+    config -- A dict of MySQL configuration credentials (see config-example.py)
+    batch_size -- INSERT min(batch_size, len(observations)) rows at a time for 
+                  fairly fast INSERT times (default batch_size=100).
+    """
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor()
+    
+    # Batch size of query
+    insert_completed = False
+    obs_remaining = len(observations)
+    obs_idx = 0
+    batch_size = min(batch_size, obs_remaining)
+    
+    while insert_completed == False:
+        ins_obs = ("INSERT INTO envcan_observation (stationID, " + 
+                   "obs_datetime_std, obs_datetime_dst, temp_c, " +
+                   "dewpoint_temp_c, rel_humidity_pct, wind_dir_deg, " + 
+                   "wind_speed_kph, visibility_km, station_pressure_kpa, " +
+                   "humidex, wind_chill, weather_desc, quality) VALUES (")
+        for i in range(obs_idx, obs_remaining):
+            ins_obs += "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        ins_obs += ")"
+    # Query envcan_station for matching stationID
+    query_station = "SELECT * FROM envcan_station WHERE stationID = %s"
+    query_data = (station.station_id)
+    cursor.execute(query_station, query_data)
+    
+    station_row = cursor.fetchone()
+    # If no station exists matching that stationID, insert one
+    if station_row == None:
+        insert_station = ("INSERT INTO envcan_station (stationID, name, " + 
+                          "province, latitude, longitude, elevation, " + 
+                          "climate_identifier, local_timezone) " + 
+                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
+        insert_data = (station.station_id, station.name, station.province, 
+                    station.latitude, station.longitude, station.elevation, 
+                    station.climate_identifier, station.local_tz_str)
+        cursor.execute(insert_station, insert_data)
+    
+    # Make sure data is committed to the database
+    cnx.commit()
+    cursor.close()
+    cnx.close()
+
+def mysql_insert_station(station, config):
+    """
+    Checks if a station matching the stationID exists. If no match exists, 
+    then one is inserted.
+    
+    Keyword arguments:
+    station -- A models.Station object to be inserted into a MySQL database
+    config -- A dict of MySQL configuration credentials (see config-example.py)
+    """
+    cnx = mysql.connector.connect(**config)
+    cursor = cnx.cursor()
+
+    # Query envcan_station for matching stationID
+    query_station = "SELECT * FROM envcan_station WHERE stationID = %s"
+    query_data = (station.station_id)
+    cursor.execute(query_station, query_data)
+    
+    station_row = cursor.fetchone()
+    # If no station exists matching that stationID, insert one
+    if station_row == None:
+        insert_station = ("INSERT INTO envcan_station (stationID, name, " + 
+                          "province, latitude, longitude, elevation, " + 
+                          "climate_identifier, local_timezone) " + 
+                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
+        insert_data = (station.station_id, station.name, station.province, 
+                    station.latitude, station.longitude, station.elevation, 
+                    station.climate_identifier, station.local_tz_str)
+        cursor.execute(insert_station, insert_data)
+    
+    # Make sure data is committed to the database
+    cnx.commit()
+    cursor.close()
+    cnx.close()
+
+def parse_xml(station_id, year_num, month_num, day_num_start,
                local_tz_name):
     """
     Calls Environment Canada endpoint and parses the returned XML into 
     StationData objects.
+    
+    TODO(r24mille): Allow user to adjust timeframe parameter.
     
     Keyword arguments:
     station_id -- Integer corresponding to an Environment Canada station ID 
@@ -65,7 +153,6 @@ def import_xml(station_id, year_num, month_num, day_num_start,
                                 day_num_start=day_num_start, timeframe=1,
                                 frmt='xml')
     xml_string = xml_response.read().decode('utf-8')
-    print(xml_string)
     weather_root = ElementTree.fromstring(xml_string)
     
     # Instantiate objects that are returned by this function
@@ -164,13 +251,9 @@ def import_xml(station_id, year_num, month_num, day_num_start,
     # Return XML elements parsed into a list of StationData objects
     return [station, observations]
         
-        
 if __name__ == "__main__":
-    [station, observations] = import_xml(station_id=32008, year_num=2010, 
-                                         month_num=3, day_num_start=1, 
-                                         local_tz_name='America/Toronto')
-    
-    for observation in observations:
-        print(observation)
-        
-    print(observations[0])
+    [station, observations] = parse_xml(station_id=32008, year_num=2010, 
+                                        month_num=3, day_num_start=1, 
+                                        local_tz_name='America/Toronto')
+    mysql_insert_station(station=station, config=mysql_config)
+    mysql_insert_observations(observations=observations, config=mysql_config)
