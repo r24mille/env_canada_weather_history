@@ -61,6 +61,6 @@ class Station():
                 ', longitude=' + str(self.longitude or 'None') + 
                 ', latitude=' + str(self.latitude or 'None') + 
                 ', elevation=' + str(self.elevation or 'None') + 
-                ', local_tz_str=' + str(self.local_tz_str or 'None') + 
+                ', climate_identifier=' + str(self.climate_identifier or 'None') + 
                 ', local_tz_str=' + str(self.local_tz_str or 'None') + 
                 ']')
