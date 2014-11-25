@@ -57,36 +57,43 @@ def mysql_insert_observations(observations, config, batch_size=100):
     cursor = cnx.cursor()
     
     # Batch size of query
-    insert_completed = False
-    obs_remaining = len(observations)
-    obs_idx = 0
-    batch_size = min(batch_size, obs_remaining)
+    insert_complete = False
+    batch_start_idx = 0
+    batch_size = min(batch_size, len(observations))
     
-    while insert_completed == False:
+    # Continue batched INSERTs until Observations list has been processed
+    while insert_complete == False:
+        batch_idx_upperbound = (batch_start_idx + batch_size)
+        ins_data = ()
         ins_obs = ("INSERT INTO envcan_observation (stationID, " + 
                    "obs_datetime_std, obs_datetime_dst, temp_c, " +
                    "dewpoint_temp_c, rel_humidity_pct, wind_dir_deg, " + 
                    "wind_speed_kph, visibility_km, station_pressure_kpa, " +
                    "humidex, wind_chill, weather_desc, quality) VALUES (")
-        for i in range(obs_idx, obs_remaining):
-            ins_obs += "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, "
+        for i in range(batch_start_idx, batch_idx_upperbound):
+            obs = observations[i]
+            ins_obs += "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
+            ins_data += (obs.station_id, obs.temp_c, obs.dewpoint_temp_c, 
+                        obs.rel_humidity_pct, obs.wind_dir_deg, 
+                        obs.wind_speed_kph, obs.visibility_km, 
+                        obs.station_pressure_kpa, obs.humidex, obs.wind_chill, 
+                        obs.weather_desc, obs.obs_datetime_std, 
+                        obs.obs_datetime_dst, obs.obs_quality)
+            
+            # If i isn't the last item in batch, add a comma to the VALUES items
+            if i != (batch_idx_upperbound-1):
+                ins_obs += ", "
         ins_obs += ")"
-    # Query envcan_station for matching stationID
-    query_station = "SELECT * FROM envcan_station WHERE stationID = %s"
-    query_data = (station.station_id)
-    cursor.execute(query_station, query_data)
-    
-    station_row = cursor.fetchone()
-    # If no station exists matching that stationID, insert one
-    if station_row == None:
-        insert_station = ("INSERT INTO envcan_station (stationID, name, " + 
-                          "province, latitude, longitude, elevation, " + 
-                          "climate_identifier, local_timezone) " + 
-                          "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
-        insert_data = (station.station_id, station.name, station.province, 
-                    station.latitude, station.longitude, station.elevation, 
-                    station.climate_identifier, station.local_tz_str)
-        cursor.execute(insert_station, insert_data)
+        
+        cursor.execute(ins_obs, ins_data)
+        
+        # If the upper bound is the last observation, mark INSERTs complete
+        if len(observations) - batch_idx_upperbound == 0:
+            insert_complete = True
+        else: # Slide batch window
+            batch_size = min(batch_size, 
+                             len(observations) - batch_idx_upperbound)
+            batch_start_idx = batch_idx_upperbound
     
     # Make sure data is committed to the database
     cnx.commit()
@@ -256,4 +263,5 @@ if __name__ == "__main__":
                                         month_num=3, day_num_start=1, 
                                         local_tz_name='America/Toronto')
     mysql_insert_station(station=station, config=mysql_config)
-    mysql_insert_observations(observations=observations, config=mysql_config)
+    mysql_insert_observations(observations=observations, config=mysql_config, 
+                              batch_size=10)
