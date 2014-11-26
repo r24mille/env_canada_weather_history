@@ -40,8 +40,8 @@ class Observation():
 
 class Station():
     """
-    An object structured similar to the stationinformation XML element so that data 
-    retrieved via the XML data source is easier to manipulate.
+    An object structured similar to the stationinformation XML element so that 
+    data retrieved via the XML data source is easier to manipulate.
     """
     def __init__(self):
         self.station_id = None
@@ -61,6 +61,7 @@ class Station():
                 ', longitude=' + str(self.longitude or 'None') + 
                 ', latitude=' + str(self.latitude or 'None') + 
                 ', elevation=' + str(self.elevation or 'None') + 
-                ', climate_identifier=' + str(self.climate_identifier or 'None') + 
+                ', climate_identifier=' + 
+                str(self.climate_identifier or 'None') + 
                 ', local_tz_str=' + str(self.local_tz_str or 'None') + 
                 ']')
