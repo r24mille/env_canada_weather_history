@@ -40,7 +40,7 @@ CREATE TABLE `envcan_observation` (
   `station_pressure_kpa` FLOAT NULL, 
   `humidex` FLOAT NULL, 
   `wind_chill` SMALLINT NULL, 
-  `weather_desc` VARCHAR(45) NULL, 
+  `weather_desc` VARCHAR(75) NULL, 
   `quality` CHAR(2) NULL, 
   PRIMARY KEY (`envcan_obs_id`), 
   INDEX `envcan_station_fk_idx` (`stationID` ASC), 
