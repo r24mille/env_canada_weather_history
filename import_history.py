@@ -66,32 +66,33 @@ def mysql_insert_observations(observations, config, batch_size=100):
         batch_idx_upperbound = (batch_start_idx + batch_size)
         ins_data = ()
         ins_obs = ("INSERT INTO envcan_observation (stationID, " + 
-                   "obs_datetime_std, obs_datetime_dst, temp_c, " +
+                   "obs_datetime_std, obs_datetime_dst, temp_c, " + 
                    "dewpoint_temp_c, rel_humidity_pct, wind_dir_deg, " + 
-                   "wind_speed_kph, visibility_km, station_pressure_kpa, " +
-                   "humidex, wind_chill, weather_desc, quality) VALUES (")
+                   "wind_speed_kph, visibility_km, station_pressure_kpa, " + 
+                   "humidex, wind_chill, weather_desc, quality) VALUES ")
         for i in range(batch_start_idx, batch_idx_upperbound):
             obs = observations[i]
-            ins_obs += "%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s"
-            ins_data += (obs.station_id, obs.temp_c, obs.dewpoint_temp_c, 
-                        obs.rel_humidity_pct, obs.wind_dir_deg, 
-                        obs.wind_speed_kph, obs.visibility_km, 
-                        obs.station_pressure_kpa, obs.humidex, obs.wind_chill, 
-                        obs.weather_desc, obs.obs_datetime_std, 
-                        obs.obs_datetime_dst, obs.obs_quality)
+            ins_obs += "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"
+            ins_data += (obs.station_id,
+                         obs.obs_datetime_std.strftime('%Y-%m-%d %H:%M:%S'),
+                         obs.obs_datetime_dst.strftime('%Y-%m-%d %H:%M:%S'),
+                         obs.temp_c, obs.dewpoint_temp_c,
+                         obs.rel_humidity_pct, obs.wind_dir_deg,
+                         obs.wind_speed_kph, obs.visibility_km,
+                         obs.station_pressure_kpa, obs.humidex, obs.wind_chill,
+                         obs.weather_desc, obs.obs_quality)
             
             # If i isn't the last item in batch, add a comma to the VALUES items
-            if i != (batch_idx_upperbound-1):
+            if i != (batch_idx_upperbound - 1):
                 ins_obs += ", "
-        ins_obs += ")"
         
         cursor.execute(ins_obs, ins_data)
         
         # If the upper bound is the last observation, mark INSERTs complete
         if len(observations) - batch_idx_upperbound == 0:
             insert_complete = True
-        else: # Slide batch window
-            batch_size = min(batch_size, 
+        else:  # Slide batch window
+            batch_size = min(batch_size,
                              len(observations) - batch_idx_upperbound)
             batch_start_idx = batch_idx_upperbound
     
@@ -113,9 +114,9 @@ def mysql_insert_station(station, config):
     cursor = cnx.cursor()
 
     # Query envcan_station for matching stationID
-    query_station = "SELECT * FROM envcan_station WHERE stationID = %s"
-    query_data = (station.station_id)
-    cursor.execute(query_station, query_data)
+    query_station = ("SELECT * FROM envcan_station " + 
+                     "WHERE stationID = %(station_id)s")
+    cursor.execute(query_station, {'station_id':station.station_id})
     
     station_row = cursor.fetchone()
     # If no station exists matching that stationID, insert one
@@ -124,8 +125,8 @@ def mysql_insert_station(station, config):
                           "province, latitude, longitude, elevation, " + 
                           "climate_identifier, local_timezone) " + 
                           "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
-        insert_data = (station.station_id, station.name, station.province, 
-                    station.latitude, station.longitude, station.elevation, 
+        insert_data = (station.station_id, station.name, station.province,
+                    station.latitude, station.longitude, station.elevation,
                     station.climate_identifier, station.local_tz_str)
         cursor.execute(insert_station, insert_data)
     
@@ -134,7 +135,7 @@ def mysql_insert_station(station, config):
     cursor.close()
     cnx.close()
 
-def parse_xml(station_id, year_start, year_end, month_start, month_end, 
+def parse_xml(station_id, year_start, year_end, month_start, month_end,
               day_start, local_tz_name):
     """
     Calls Environment Canada endpoint and parses the returned XML into 
@@ -174,7 +175,7 @@ def parse_xml(station_id, year_start, year_end, month_start, month_end,
     end_date = datetime(year_end, month_end, day_start)
     while req_date <= end_date:
         xml_response = fetch_content(station_id=station_id, year_num=y,
-                                    month_num=m, day_num_start=d, timeframe=1, 
+                                    month_num=m, day_num_start=d, timeframe=1,
                                     frmt='xml')
         xml_string = xml_response.read().decode('utf-8')
         weather_root = ElementTree.fromstring(xml_string)
@@ -297,14 +298,11 @@ def parse_xml(station_id, year_start, year_end, month_start, month_end,
     return [station, observations]
         
 if __name__ == "__main__":
-    [station, observations] = parse_xml(station_id=32008, year_start=2010, 
-                                        year_end=2011, month_start=11, 
-                                        month_end=2, day_start=1, 
+    [station, observations] = parse_xml(station_id=30266, year_start=2010,
+                                        year_end=2012, month_start=1,
+                                        month_end=12, day_start=1,
                                         local_tz_name='America/Toronto')
 
-    print(station)
-    print(observations[0])
-    print(observations[-1])
-    #mysql_insert_station(station=station, config=mysql_config)
-    #mysql_insert_observations(observations=observations, config=mysql_config, 
-    #                          batch_size=10)
+    mysql_insert_station(station=station, config=mysql_config())
+    mysql_insert_observations(observations=observations, config=mysql_config(),
+                              batch_size=100)
