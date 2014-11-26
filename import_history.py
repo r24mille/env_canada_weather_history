@@ -15,6 +15,8 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
     Fetch weather history data from Environment Canada.
     
     TODO(r24mille): Allow a user to switch between XML/CSV data for parsing.
+    TODO(r24mille): Allow user to change the timeframe parameter for different 
+                    data resolution (ie. daily, hourly, etc.)
     
     Keyword arguments:
     station_id -- Integer corresponding to an Environment Canada station ID 
