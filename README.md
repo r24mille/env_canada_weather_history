@@ -1,17 +1,21 @@
-env_canada_weather_history
-==========================
-
+Environment Canada Weather History
+==================================
 Project for parsing historical weather data from Environment Canada given a 
 stationID.
 
-Setup:
-======
+
+Dependencies
+============
 pip install pytz
 
+
+Setup
+=====
 Run create.sql on the target SQL schema
 
-Usage:
-======
+
+Usage
+=====
 stationID from "Search by Proximity"
 http://climate.weather.gc.ca/advanceSearch/searchHistoricData_e.html
 
