@@ -101,7 +101,7 @@ def sql_insert_observations(observations, config, batch_size=100):
     """
     Inserts Observations (ie. stationdata) into a database.
     
-    TODO (r24mille): Decouple this function from the main file
+    TODO (r24mille): Decouple this method from the main file
     TODO (r24mille): Support some other driver other than mysql.connector
     
     Keyword arguments:
@@ -164,7 +164,7 @@ def sql_insert_station(station, config):
     Checks if a station matching the stationID exists. If no match exists, 
     then one is inserted.
     
-    TODO (r24mille): Decouple this function from the main file
+    TODO (r24mille): Decouple this method from the main file
     TODO (r24mille): Support some other driver other than mysql.connector
     
     Keyword arguments:
@@ -227,7 +227,7 @@ def range_hourly(station_id, year_start, year_end, month_start, month_end,
     model.Station object and observations is a list of hourly 
     model.Observation objects.
     """
-    # Instantiate objects that are returned by this function
+    # Instantiate objects that are returned by this method
     station = None
     observations = list()
     
@@ -365,7 +365,7 @@ def main():
     """
     Main method intended to by called via command-line
     
-    TODO(r24mille): Parse SQL config from file rather than Python function
+    TODO(r24mille): Parse SQL config from file rather than Python method
     TODO(r24mille): Add means to customize CSV filenames generated
     """
     
@@ -417,7 +417,6 @@ def main():
         csv_write_observations(observations=observations, 
                                filename=(str(args.station_id) + 
                                          'observations.csv'))
-
 
 if __name__ == "__main__":
     main()
