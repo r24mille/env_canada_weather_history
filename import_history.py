@@ -1,3 +1,5 @@
+import argparse
+import csv
 from datetime import datetime, timezone
 from urllib import request
 from xml.etree import ElementTree
@@ -8,6 +10,57 @@ import pytz
 from config import mysql_config
 from models import Observation, Station
 
+def canadian_timezones():
+    """
+    Valid set of Canadian timezone strings according to the IANA standard.
+    See https://en.wikipedia.org/wiki/Time_in_Canada#IANA_time_zone_database
+    
+    Return
+    List of valid, Canadian timezone strings.
+    """
+    
+    timezones = ['America/St_Johns', 'America/Halifax', 'America/Glace_Bay', 
+                 'America/Moncton', 'America/Goose_Bay', 
+                 'America/Blanc-Sablon', 'America/Montreal', 
+                 'America/Toronto', 'America/Nipigon', 'America/Thunder_Bay', 
+                 'America/Iqaluit', 'America/Pangnirtung', 'America/Resolute', 
+                 'America/Atikokan', 'America/Rankin_Inlet', 
+                 'America/Winnipeg', 'America/Rainy_River', 'America/Regina', 
+                 'America/Swift_Current', 'America/Edmonton', 
+                 'America/Cambridge_Bay', 'America/Yellowknife', 
+                 'America/Inuvik', 'America/Creston', 'America/Dawson_Creek', 
+                 'America/Vancouver', 'America/Whitehorse', 'America/Dawson']
+    return timezones
+
+def csv_write_station(station, filename='station.csv'):
+    """Write model.Station information to CSV file."""
+    with open(filename, 'w', newline='') as csvfile:
+        csvw = csv.writer(csvfile)
+        csvw.writerow(['station_id', 'name', 'province', 'longitude', 
+                       'latitude', 'elevation', 'climate_identifier', 
+                       'local_tz_str'])
+        csvw.writerow([station.station_id, station.name, station.province, 
+                       station.longitude, station.latitude, station.elevation, 
+                       station.climate_identifier, station.local_tz_str])
+    
+    
+def csv_write_observations(observations, filename='observations.csv'):
+    """Write model.Observation list to CSV file."""
+    with open(filename, 'w', newline='') as csvfile:
+        csvw = csv.writer(csvfile)
+        csvw.writerow(['station_id', 'temp_c', 'dewpoint_temp_c', 
+                       'rel_humidity_pct', 'wind_dir_deg', 'wind_speed_kph', 
+                       'visibility_km', 'station_pressure_kpa', 'humidex',
+                       'wind_chill', 'weather_desc', 'obs_datetime_std', 
+                       'obs_datetime_dst', 'obs_quality'])
+        for obs in observations:
+            csvw.writerow([obs.station_id, obs.temp_c, obs.dewpoint_temp_c, 
+                           obs.rel_humidity_pct, obs.wind_dir_deg, 
+                           obs.wind_speed_kph, obs.visibility_km, 
+                           obs.station_pressure_kpa, obs.humidex, 
+                           obs.wind_chill, obs.weather_desc, 
+                           obs.obs_datetime_std, obs.obs_datetime_dst, 
+                           obs.obs_quality])
 
 def fetch_content(station_id, year_num, month_num, day_num_start,
                   timeframe=1, frmt='xml'):
@@ -44,9 +97,12 @@ def fetch_content(station_id, year_num, month_num, day_num_start,
     url_response = request.urlopen(data_url)
     return url_response
 
-def mysql_insert_observations(observations, config, batch_size=100):
+def sql_insert_observations(observations, config, batch_size=100):
     """
-    Inserts Observations (ie. stationdata) into a database. 
+    Inserts Observations (ie. stationdata) into a database.
+    
+    TODO (r24mille): Decouple this function from the main file
+    TODO (r24mille): Support some other driver other than mysql.connector
     
     Keyword arguments:
     observation -- A list of models.Observation objects to be inserted into a 
@@ -103,10 +159,13 @@ def mysql_insert_observations(observations, config, batch_size=100):
     cursor.close()
     cnx.close()
 
-def mysql_insert_station(station, config):
+def sql_insert_station(station, config):
     """
     Checks if a station matching the stationID exists. If no match exists, 
     then one is inserted.
+    
+    TODO (r24mille): Decouple this function from the main file
+    TODO (r24mille): Support some other driver other than mysql.connector
     
     Keyword arguments:
     station -- A models.Station object to be inserted into a MySQL database
@@ -137,8 +196,8 @@ def mysql_insert_station(station, config):
     cursor.close()
     cnx.close()
 
-def parse_xml(station_id, year_start, year_end, month_start, month_end,
-              day_start, local_tz_name):
+def range_hourly(station_id, year_start, year_end, month_start, month_end,
+                 day_start, local_tz_name):
     """
     Calls Environment Canada endpoint and parses the returned XML into 
     StationData objects.
@@ -147,7 +206,7 @@ def parse_xml(station_id, year_start, year_end, month_start, month_end,
     station_id -- Integer corresponding to an Environment Canada station ID 
                   (ie. location of weather reading).
     year_start -- Integer indicating the year of the first weather history
-                      request.
+                  request.
     year_end -- Integer indicating the year of the last weather history 
                 request (inclusive). In combination with month_start and 
                 month_end, all weather history between start and end times 
@@ -161,10 +220,12 @@ def parse_xml(station_id, year_start, year_end, month_start, month_end,
     day_start -- Integer indicating the starting day of the forecast, 
                  though multiple days of forecasted data will be returned.
     local_tz_name -- String representation of local timezone name 
-                    (eg. 'America/Toronto').
+                     (eg. 'America/Toronto').
                          
     Return:
-    A list of StationData objects.
+    Two two-item vector [station, observations] where station is a 
+    model.Station object and observations is a list of hourly 
+    model.Observation objects.
     """
     # Instantiate objects that are returned by this function
     station = None
@@ -298,13 +359,60 @@ def parse_xml(station_id, year_start, year_end, month_start, month_end,
     
     # Return XML elements parsed into a list of StationData objects
     return [station, observations]
-        
-if __name__ == "__main__":
-    [station, observations] = parse_xml(station_id=30266, year_start=2010,
-                                        year_end=2012, month_start=1,
-                                        month_end=12, day_start=1,
-                                        local_tz_name='America/Toronto')
 
-    mysql_insert_station(station=station, config=mysql_config())
-    mysql_insert_observations(observations=observations, config=mysql_config(),
-                              batch_size=100)
+
+def main():
+    """Main method intended to by called via command-line"""
+    
+    description = 'Environment Canda historical weather parser/import tool.'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--station_id', required=True, type=int,
+                        help='The stationID from climate.weather.gc.ca URL')
+    parser.add_argument('--year_start', required=True, type=int,
+                        help='Year for start of historical weather range')
+    parser.add_argument('--year_end', required=True, type=int,
+                        help='Year for end of historical weather range (inclusive)')
+    parser.add_argument('--month_start', required=True, type=int,
+                        help='Month for start of historical weather range')
+    parser.add_argument('--month_end', required=True, type=int,
+                        help='Month for end of historical weather range (inclusive)')
+    parser.add_argument('--tz_name', required=True, type=str, 
+                        choices=canadian_timezones(), 
+                        help='IANA timezone string of the weather station')
+    parser.add_argument('--day_start', default=1, type=int,
+                        help='Starting day for the historical weather range')
+    parser.add_argument('--dest', default='csv', type=str, 
+                        choices=['csv', 'sql'],
+                        help='Destination of the parsed weather information')
+    parser.add_argument('--batch_size', default=100, type=int,
+                        help='If destination is SQL, control the INSERT batch size')
+    args = parser.parse_args()
+    
+    print(args)        
+    
+    # Fetch range of hourly weather observations
+    [station, observations] = range_hourly(station_id=args.station_id,
+                                           year_start=args.year_start,
+                                           year_end=args.year_end, 
+                                           month_start=args.month_start,
+                                           month_end=args.month_end, 
+                                           day_start=args.day_start,
+                                           local_tz_name=args.tz_name)
+ 
+    # Write parsed information to appropriate destination
+    if args.dest == 'sql':
+        sql_insert_station(station=station, config=mysql_config())
+        sql_insert_observations(observations=observations, 
+                                config=mysql_config(), 
+                                batch_size=args.batch_size)
+    elif args.dest == 'csv':
+        csv_write_station(station=station, 
+                          filename=(str(args.station_id) + 
+                                    'station.csv'))
+        csv_write_observations(observations=observations, 
+                               filename=(str(args.station_id) + 
+                                         'observations.csv'))
+
+
+if __name__ == "__main__":
+    main()
