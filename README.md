@@ -24,13 +24,13 @@ Also depends on the pytz module, installed using:
 
 Setup
 =====
-## MySQL Destination
+### MySQL Destination
 1. For MySQL destination, run the ./sql/create.sql statements on your target 
 schema.
 2. Copy config-example.py to config.py and fill out the appropriate connection 
 details.
 
-## CSV Destination
+### CSV Destination
 None
 
 
