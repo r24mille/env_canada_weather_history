@@ -362,7 +362,12 @@ def range_hourly(station_id, year_start, year_end, month_start, month_end,
 
 
 def main():
-    """Main method intended to by called via command-line"""
+    """
+    Main method intended to by called via command-line
+    
+    TODO(r24mille): Parse SQL config from file rather than Python function
+    TODO(r24mille): Add means to customize CSV filenames generated
+    """
     
     description = 'Environment Canda historical weather parser/import tool.'
     parser = argparse.ArgumentParser(description=description)
