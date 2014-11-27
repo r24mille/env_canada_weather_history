@@ -45,7 +45,7 @@ parameters. An example for importing hourly, historical weather information
 from November 1, 2010 through January 31, 2011 from the Kitchener/Waterloo 
 weather station:
 
-    python import_history.py --station_id=48569 --year_start 2010 --month_start 11 --year_end 2011 --month_end 1 --tz_name America/Toronto --dest csv
+    python import_history.py --station_id 48569 --year_start 2010 --month_start 11 --year_end 2011 --month_end 1 --tz_name America/Toronto --dest csv
 
 On notable parameter is the integer passed to --station_id. This corresponds 
 to an Environment Canada weather station. Use form on the "Search by 
